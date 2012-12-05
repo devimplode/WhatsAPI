@@ -5,7 +5,7 @@
 		private $contactlist=false;
 		private $lastTimestamp=false;//last timestamp we postet to screen output
 		private $version="v0.1";
-		private $status=false;//status (true|false) of logged in client
+		private $status=true;//status (true|false) of logged in client
 		private $idlesince=false;
 		private $autoafk=60;//time to wait in seconds before status automaticly switches to unavailable
 		private $autoStatus=false;
@@ -277,9 +277,7 @@
 						$this->wp->Connect();
 						px("Login...");
 						$this->wp->Login();
-						$this->wp->sendNickname($this->user['nickname']);
 						px("Connected!");
-						$this->setStatus(true);
 						$this->state="idle";
 						break;
 					case 'idle':
