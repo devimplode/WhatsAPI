@@ -26,7 +26,9 @@
 				switch($this->state){
 					case false:
 						//startup
+						pnl();
 						px("Whatsapp for comandline ".$this->version);
+					case 'login':
 						pnl();
 						p("Do you have an account alredy?");
 						p("Choose wisely!");
@@ -179,8 +181,9 @@
 								//ToDo: Blacklist entry for this client
 								die();
 							}
+							unset($this->tmp['pwditime']);
 						}
-						unset($pass,$this->tmp['pwditime']);
+						unset($pass);
 						break;
 					case 'create_user_createuser_createaccount':
 						p("Let us create an account for you! ;)");
@@ -260,6 +263,47 @@
 					case 'login_user_connect':
 						$this->state="connect";
 						break;
+					//login_whatsapp
+					case 'login_wa':
+						pnl();
+						p("Mobile number: ",">");
+						$this->state="login_wa_isender";
+						break;
+					case 'login_wa_isender':
+						$sender=$this->getInput();
+						if($sender!=''){
+							$this->sender=$sender;
+							pnl();
+							p("Now you have to type in the 'password'.");
+							p("If you have an Android you must input the IMEI of your mobile.");
+							p("If you have an iPhone, please input the MAC of your device.");
+							pnl();
+							p("Password:",">");
+							$this->state="login_wa_ipass";
+						}
+						unset($sender);
+						break;
+					case 'login_wa_ipass':
+						$imei=$this->getInput();
+						if($imei!=''){
+							$this->imei=$imei;
+							pnl();
+							p("Please choose a alias or nick name. This is not your account name!");
+							pnl();
+							p("Nickname:",">");
+							$this->state="login_wa_inickname";
+						}
+						unset($imei);
+						break;
+					case 'login_wa_inickname':
+						$nickname=$this->getInput();
+						if($nickname!=''){
+							pnl();
+							$this->user=array('sender'=>$this->sender,'imei'=>$this->imei,'nickname'=>$nickname);
+							$this->state="connect";
+						}
+						unset($imei);
+						break;
 					case 'connect':
 						if(!is_array($this->user)){
 							$this->state="fail_login";
@@ -271,6 +315,7 @@
 						if(stristr(@file_get_contents("https://r.whatsapp.net/v1/exist.php?cc=".substr($this->user['sender'],0,2)."&in=".substr($this->user['sender'],2)."&udid=".$this->wp->encryptPassword()),'status="ok"') === false){
 							px("Couldn't login! Maybe login credentials changed?");
 							$this->state="fail_login";
+							break;
 						}
 						//unset($url);
 						px("Connecting to server...");
@@ -285,6 +330,10 @@
 						$this->pullMessages();
 						$this->pullInput();
 						$this->autoupdateStatus();
+						break;
+					case 'fail_login':
+						px("Login has failed! Please try again.");
+						$this->state="login";
 						break;
 					case 'exit':
 						//logout
