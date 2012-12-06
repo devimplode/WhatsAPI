@@ -3,6 +3,8 @@
 	class wa{
 		private $state=false;//status of this client
 		private $last_contact=false;
+		private $lastSender=false;
+		private $dst=false;
 		private $contactlist=false;
 		private $lastTimestamp=false;//last timestamp we postet to screen output
 		private $version="v0.1";
@@ -346,6 +348,7 @@
 						px("Something went wrong. Please try again.");
 						exit(1);
 				}
+				usleep(1000);
 			}
 		}
 		//
@@ -430,38 +433,39 @@
 						if(strpos($query,' ')!==false){//we send a single mesage!
 							$tmsg = trim(strstr($query,' ',FALSE));
 							$query = trim(strstr($query,' ',TRUE));
-							if($this->lastSender!=$sender)
-								print("\n[ ] $nickname (Me):\n");
-							p("To: ".(($contactlist->get($query)!=false)?$contactlist->get($query)->toString():$query));
+							if($this->lastSender!=$this->user['sender']){
+								pnl();
+								p($this->user['nickname']." (Me):");
+							}
+							p("To: ".(($this->contactlist->get($query)!=false)?$this->contactlist->get($query)->toString():$query));
 							p($tmsg,">");
-							$this->wp->Message(time()."-1", $contactlist->getNumber($query), $tmsg);
-							$this->lastSender=$sender;
+							$this->wp->Message(time()."-1", $this->contactlist->getNumber($query), $tmsg);
+							$this->lastSender=$this->user['sender'];
 						}
 						else{
-							$this->dst = $contactlist->getNumber($query);
-							p("To: ".(($contactlist->get($query)!=false)?$contactlist->get($query)->toString():$this->dst));
+							$this->dst = $this->contactlist->getNumber($query);
+							p("To: ".(($this->contactlist->get($query)!=false)?$this->contactlist->get($query)->toString():$this->dst));
 						}
 						unset($query,$tmsg);
 						break;
 					case "/afk":
-						$this->status=!$this->status;
-						$this->wp->sendPresence($status);
+						$this->wp->sendPresence(!$this->status);
 						break;
 					case "/r":
 					case "/re":
 					case "/reply":
-						if($this->lastContact==false || !is_int($this->lastContact)){
+						if(!isset($this->lastContact) || $this->lastContact==false || !is_int($this->lastContact)){
 							px("No one to reply yet.");
 							break;
 						}
 						$query = trim(strstr($line,' ',FALSE));
-						if($this->lastSender!=$sender)
-							p("$nickname (Me):");
+						if($this->lastSender!=$this->user['sender'])
+							p($this->user['nickname']." (Me):");
 						if($this->dst!=$this->lastContact)
-							p("To: ".(($contactlist->get($this->lastContact)!=false)?$contactlist->get($this->lastContact)->toString():$this->lastContact));
+							p("To: ".(($this->contactlist->get($this->lastContact)!=false)?$this->contactlist->get($this->lastContact)->toString():$this->lastContact));
 						p($query,">");
 						$this->wp->Message(time()."-1", $this->lastContact, $query);
-						$this->lastSender=$sender;
+						$this->lastSender=$this->user['sender'];
 						unset($query);
 						break;
 					case "/accountinfo":
@@ -483,34 +487,36 @@
 					case "/friendlist":
 					case "/contactlist":
 					case "/addressbook":
-						echo("\n[ ] Address book:\n");
-						$t=$contactlist->getList();
+						p("Address book:");
+						$t=$this->contactlist->getList();
 						foreach($t as $entry)
 							echo(sprintf("%10s",(($entry->get('shortcut')!=false)?$entry->get('shortcut'):""))."| ".$entry->toString()."\n");
 						break;
 					case "/c":
 					case "/contact":
 						break;
-						echo("\n[ ] Choose contact: ");
+					/**
+						pnl();
+						p("Choose contact: ");
 						//ToDo: switching to contact selection mode
 						//		find some nice way... the following code couldn't work
 						$user_input=trim(fgets_u(STDIN));
 						if($user_input!=""){
-							$c=$contactlist->get($user_input);
+							$c=$this->contactlist->get($user_input);
 							if($c==false){
 								//new user
 								echo("   Creating new user with name: $user_input\n");
 								echo("   Phone number: ");
 								$number_input=fgets_u(STDIN);
 								if(is_int(intval($number_input))){
-									$contactlist->createEntry($user_input,$number_input);
+									$this->contactlist->createEntry($user_input,$number_input);
 									echo("[ ] Contact \"$user_input\" successfully saved!\n");
 									break;
 								}
-								echo("[X] Sorry, something went wrong!");
+								px("Sorry, something went wrong!");
 							}
 							else{
-								echo("[ ] User selected: ".$c->toString()."\n");
+								p("User selected: ".$c->toString()."\n");
 								$cd=$c->getList();
 								foreach($cd as $k=>$v){
 									printf("%10s: %s\n",$k,$v);
@@ -518,6 +524,7 @@
 							}
 						}
 						break;
+					*/
 					case ":q":// for my vim-typo
 					case "/q":
 					case "/quit":
@@ -527,13 +534,20 @@
 						die("[X] Good by and have a nice day!\n");
 						break;
 					default:
-						if(!$status)
-							$this->setStatus(($status=true));
-						if($this->lastSender!=$sender)
-							print("\n[ ] $nickname (Me):\n");
-						echo "[>] $line\n";
+						if(!$this->status)
+							$this->setStatus(true);
+						if(!isset($this->dst) || $this->dst==false){
+							px("No target is selected!");
+							p("Usage: /w <number or contact shortcut>");
+							break;
+						}
+						if($this->lastSender!=$this->user['sender']){
+							pnl();
+							p($this->user['nickname']." (Me):");
+						}
+						p($line,">");
 						$this->wp->Message(time()."-1", $this->dst , $line);
-						$this->lastSender=$sender;
+						$this->lastSender=$this->user['sender'];
 						break;
 				}
 			}
