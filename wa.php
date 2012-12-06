@@ -1,3 +1,4 @@
+#!/usr/bin/php
 <?php
 	class wa{
 		private $state=false;//status of this client
